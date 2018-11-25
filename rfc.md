@@ -7,16 +7,34 @@ Database/storage should be a simple file.
 
 Checks are conducted by executing either ScriptBlocks or scripts that return either a PowerShell string, ScriptBlock or a custom fix object.
 
-# Fix
-The custom fix object contains:
+The IssueCheck object contains:
 + databaseId (GUID)
 + sequenceNumber (Long Int)
 + checkName (String)
++ checkScriptPath (String)
++ checkScriptBlock (ScriptBlock)
++ checkParameters (Hashtable)
++ status (Int) Enabled | Disabled
++ defaultFixDescription (String)
++ defaultStatus (Int) Ready | Pending | Complete | Error | Canceled
++ defaultNotificationCount (Int)
+
+# Fix
+A fix is a ScriptBlock to make the change recomended by the fix.  It supports a number of features to allow for reviewing and documenting the fixes.
+
+The IssueFix object contains:
++ databaseId (GUID)
++ sequenceNumber (Long Int)
++ combinedSequenceNumber (Long Int)
++ checkName (String)
 + fixCommand (ScriptBlock)
 + fixDescription (String)
-+ status (String) Null | "Ready", "Pending", "Complete" | "Error" | "Canceled"
++ status (Int) Ready | Pending | Complete | Error | Canceled
 + fixResults (String)
 + notificationCount (Int)
+
+# Sequence Number
+Both the IssueCheck and the IssueFix have sequence numbers.  IssueFix also has a combinedSequenceNumber.  If the IssueCheck object is available to the IssueFix, then the combinedSequenceNumber is calculated from the IssueCheck.sequenceNumber multiplied by 1,000,000,000 plus the IssueFix sequenceNumber.  If not, the combinedSequenceNumber is the same as sequenceNumber.  It is this combinedSequenceNumber that is used for sorting fixes.
 
 # cmdlets
 ## Processing checks
