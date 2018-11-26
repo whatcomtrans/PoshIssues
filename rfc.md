@@ -36,6 +36,9 @@ The IssueFix object contains:
 # Sequence Number
 Both the IssueCheck and the IssueFix have sequence numbers.  IssueFix also has a combinedSequenceNumber.  If the IssueCheck object is available to the IssueFix, then the combinedSequenceNumber is calculated from the IssueCheck.sequenceNumber multiplied by 1,000,000,000 plus the IssueFix sequenceNumber.  If not, the combinedSequenceNumber is the same as sequenceNumber.  It is this combinedSequenceNumber that is used for sorting fixes.
 
+# Notification Count
+Each time a notificaton is sent for a fix the notificationCount is decremented by one. By default, only fixes with a notification count greater then 0 are sent. This allows for control over how often a fix is notified about.  If the IssueCheck/IssueFix creator does not want any notifications sent (by default), set to 0.  If only want to be notified once, set to 1.  The notification cmdlets provide control over when this value is used.  For example, parameters allow only using the notification count for "Pending" fixes and instead setting "Completed/Error" fixes to 0 after first notification.  Or the notification cmdlet can send for all fixes and ignore this value.
+
 # cmdlets
 ## Processing checks
 Run a check, either all of them, by checkName, or by providing all fix details.  Returns results, optionally updating database.
@@ -94,7 +97,7 @@ Fixes in the "Pending" state can be changed to "Ready" through either the Set-Is
 
 Re-running Invoke-IssueCheck will find any fixes in the ready state and execute those first.
 
-When finished a notification of all fixes, either still pending or finished, can be sent with the Send-IssueFixMail cmdlet. Each time a notificaton is sent for a fix the notificationCount is decremented by one.  By default, onky fixes with a notification count greater then 0 are sent.  this allows for control over how often a fix is notified about. Parameters for the cmdlet can be saved in the database using Set-IssueFixMail cmdlet.
+When finished a notification of all fixes, either still pending or finished, can be sent with the Send-IssueFixMail cmdlet. Each time a notificaton is sent for a fix the notificationCount is decremented by one. By default, only fixes with a notification count greater then 0 are sent. This allows for control over how often a fix is notified about. Parameters for the cmdlet can be saved in the database using Set-IssueFixMail cmdlet.
 
 If all done, fixes that are completed or errored can be removed using Remove-IssueFix, from the database, allowing those same fixes to be presented again.  For example, an issue can be raised, addressed and then removed so the user can be notified if it comes up again.
 
