@@ -54,13 +54,22 @@ Add, changes, removes, enables or disables different checks stored in the databa
 
 ## Fixes
 Review, cancel or complete, remove issue fixes.  Fixes in a pending state can be canceled or completed.  Fixes can come from results or be loaded from the database.  Fixes that are automatically executed ("Completed" or "Error" states) can not be canceled or completed, only those in a "Pending" state.  New-IssueFix creates a fix object for return and use in checks.
-### Complete-IssueFix
-### Cancel-IssueFix
-### Get-IssueFix
-### Remove-IssueFix
 ### New-IssueFix
+Returns a PSObject<PoshIssues.Fix> object.
+### Add-IssueFix
+Adds a PSObject<PoshIssues.Fix> object to a database.
+### Remove-IssueFix
+Removes a PSObject<PoshIssues.Fix> object from a database.
+### Get-IssueFix
+Gets a PSObject<PoshIssues.Fix> object from a database.
 ### Set-IssueFix
+Changes properties of a PSObject<PoshIssues.Fix> object, either directly or in a database.
 ### Clear-IssueFix
+?Is this in alias for Remove-IssueFix?
+### Complete-IssueFix
+Changes status property of a PSObject<PoshIssues.Fix> object to "Ready".  Used as a verb to change from Pending or Canceled to Ready.
+### Cancel-IssueFix
+Changes status property of a PSObject<PoshIssues.Fix> object to "Cancel".
 
 ## Notification
 Support sending notification of either/both completed and pending fixes.  Starting off with email bit could add other channels.
