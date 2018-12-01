@@ -64,8 +64,6 @@ Removes a PSObject<PoshIssues.Fix> object from a database.
 Gets a PSObject<PoshIssues.Fix> object from a database.
 ### Set-IssueFix
 Changes properties of a PSObject<PoshIssues.Fix> object, either directly or in a database.
-### Clear-IssueFix
-?Is this in alias for Remove-IssueFix?
 ### Complete-IssueFix
 Changes status property of a PSObject<PoshIssues.Fix> object to "Ready".  Used as a verb to change from Pending or Canceled to Ready.
 ### Cancel-IssueFix
