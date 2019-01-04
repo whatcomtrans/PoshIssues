@@ -8,22 +8,23 @@ Database/storage should be a simple file.
 Checks are conducted by executing either ScriptBlocks or scripts that return either a PowerShell string, ScriptBlock or a custom fix object.
 
 The IssueCheck object contains:
-+ databaseId (GUID)
++ Id (GUID)
 + sequenceNumber (Long Int)
 + checkName (String)
-+ checkScriptPath (String)
 + checkScriptBlock (ScriptBlock)
 + checkParameters (Hashtable)
 + status (Int) Enabled | Disabled
 + defaultFixDescription (String)
-+ defaultStatus (Int) Ready | Pending | Complete | Error | Canceled
-+ defaultNotificationCount (Int)
++ defaultFixStatus (Int) Ready | Pending | Complete | Error | Canceled
++ defaultFixNotificationCount (Int)
++ databasePath (string) Add/updated by Read/Write-IssueCheck if saved in a database folder.
++ path (string) Add/updated by Read/Write-IssueCheck if saved as a standalone file.
 
 # Fix
 A fix is a ScriptBlock to make the change recomended by the fix.  It supports a number of features to allow for reviewing and documenting the fixes.
 
 The IssueFix object contains:
-+ databaseId (GUID)
++ Id (GUID) calculated feom a hash of fixCommand
 + sequenceNumber (Long Int)
 + combinedSequenceNumber (Long Int)
 + checkName (String)
@@ -32,16 +33,18 @@ The IssueFix object contains:
 + status (Int) Ready | Pending | Complete | Error | Canceled
 + fixResults (String)
 + notificationCount (Int)
++ databasePath (string) Add/updated by Read/Write-IssueCheck if saved to a database folder.
++ path (string) Add/updated by Read/Write-IssueCheck if saved as a standalone file.
 
 # Sequence Number
-Both the IssueCheck and the IssueFix have sequence numbers.  IssueFix also has a combinedSequenceNumber.  If the IssueCheck object is available to the IssueFix, then the combinedSequenceNumber is calculated from the IssueCheck.sequenceNumber multiplied by 1,000,000,000 plus the IssueFix sequenceNumber.  If not, the combinedSequenceNumber is the same as sequenceNumber.  It is this combinedSequenceNumber that is used for sorting fixes.
+Both the IssueCheck and the IssueFix have sequence numbers.  IssueFix also has a combinedSequenceNumber.  If the IssueCheck object is available to the IssueFix, then the combinedSequenceNumber is calculated at creation from the IssueCheck.sequenceNumber multiplied by 1,000,000,000 plus the IssueFix sequenceNumber.  If not, the combinedSequenceNumber is the same as sequenceNumber.  It is this combinedSequenceNumber that is used for sorting fixes.
 
 # Notification Count
 Each time a notificaton is sent for a fix the notificationCount is decremented by one. By default, only fixes with a notification count greater then 0 are sent. This allows for control over how often a fix is notified about.  If the IssueCheck/IssueFix creator does not want any notifications sent (by default), set to 0.  If only want to be notified once, set to 1.  The notification cmdlets provide control over when this value is used.  For example, parameters allow only using the notification count for "Pending" fixes and instead setting "Completed/Error" fixes to 0 after first notification.  Or the notification cmdlet can send for all fixes and ignore this value.
 
 # cmdlets
 ## Processing checks
-Run a check, either all of them, by checkName, or by providing all fix details.  Returns results, optionally updating database.
+Run a check, either all of them, by checkName, or by providing all fix details.  Returns IssueFix objects.
 ### Invoke-IssueCheck
 
 ## Issue Checks
@@ -50,55 +53,64 @@ Add, changes, removes, enables or disables different checks stored in the databa
 ### Set-IssueCheck
 ### Remove-IssueCheck
 ### Disable-IssueCheck
-### Enable-Check
+### Enable-IssueCheck
+### Write-IssueCheck
+### Read-IssueCheck
 
 ## Fixes
-Review, cancel or complete, remove issue fixes.  Fixes in a pending state can be canceled or completed.  Fixes can come from results or be loaded from the database.  Fixes that are automatically executed ("Completed" or "Error" states) can not be canceled or completed, only those in a "Pending" state.  New-IssueFix creates a fix object for return and use in checks.
+Review, cancel or complete, remove issue fixes.  Fixes in a pending state can be canceled or completed.  Fixes can come from results or be loaded from files or the database.  Fixes that are automatically executed ("Completed" or "Error" states) can not be canceled or completed, only those in a "Pending" state.  New-IssueFix creates a fix object for return and use in checks script blocks or for direclty.
 ### New-IssueFix
 Returns a PSObject<PoshIssues.Fix> object.
-### Add-IssueFix
-Adds a PSObject<PoshIssues.Fix> object to a database.
+### Write-IssueFix
+Saves a PSObject<PoshIssues.Fix> object to a file or in a database folder.
 ### Remove-IssueFix
-Removes a PSObject<PoshIssues.Fix> object from a database.
-### Get-IssueFix
-Gets a PSObject<PoshIssues.Fix> object from a database.
+Removes a PSObject<PoshIssues.Fix> object file from a database folder.
+### Read-IssueFix
+Imoorts a PSObject<PoshIssues.Fix> object from a database folder.
 ### Set-IssueFix
-Changes properties of a PSObject<PoshIssues.Fix> object, either directly or in a database.
+Changes properties of a PSObject<PoshIssues.Fix> object.
 ### Complete-IssueFix
 Changes status property of a PSObject<PoshIssues.Fix> object to "Ready".  Used as a verb to change from Pending or Canceled to Ready.
 ### Cancel-IssueFix
 Changes status property of a PSObject<PoshIssues.Fix> object to "Cancel".
+### Invoke-IssueFix
+Executes a PSObject<PoshIssues.Fix> object's script block, updating results and status.
+### Archive-IssueFix
+Moves a saved IssueFix file into the Archive folder of the database and updates filename to include the execution date.
 
 ## Notification
 Support sending notification of either/both completed and pending fixes.  Starting off with email bit could add other channels.
 ### Send-IssueFixMail
+Sends and email for each applicable IssurFix passed.  Updating notifocationCount by default.
 ### Set-IssueFixMail
-
-## Database
-+ New-IssueDatabase
-+ Set-IssueDatabase
-+ Import-IssueDatabase
-+ Export-IssueDatabase
+Saves mail notification settings to a file in the database folder.
 
 # Database
-The data will be stored in a single complex object called Database.  It will have properties for check and fix defaults.  It will contain arrays of issue checks, issue fixes and notification channel settings.
+The data will be stored in a folder with each object stored as a seperate JSON file.  This should reduce write conflicts and simplify data management tools.  The databasePath folder must exist.
 
-All of the cmdlets will load the database file using import-clixml, further ending the objects as needed.  Each cmdlet will save changes to the database object using export-clixml.
+It will be important to Write any changed objects back to the database.  Thus any commands using the database should always end the pipeline with a Write cmdlet.
 
-Since the object only supports a single use at a time, a lock file will be created, checked and deleted.  The file will have the same path and file name but with a .lock extension.  The Import-IssueDatabase will check for the lock file and may create it (default).  Save-IssueDatabase may delete (default) the lock file.
+Each object when Read or after being writtend to the database will have a databasePath property added.  This property can be supplied by property value to future write cmdlets to easily resave a changed object.
+##Folders
+Each Write cmdlet will save to a different folder, creating the folders as needed.
+###Checks
+###Fixes
+###Fixes\Archive
+###Notification
 
-Each cmdlet will have parameters for the database object or a path to the database file.
+#Pipeline
+All cmdlets takes and return either a Check or a Fix objects.  They behave similar to the PaaTru concept.
 
 # Workflow
 ## On Demand
 
-User adds (New-IssueCheck) checks to the database in the form of ScriptBlocks or paths to script files.  A hashtable of parameters to be passed may also be saved.  Each issue check supports providing defaults foe the fix objects such as fixDescription, checkName, "Pending" or "Ready" status.
+User adds (New-IssueCheck) checks to the database in the form of ScriptBlocks.  A hashtable of parameters to be passed may also be saved.  Each issue check supports providing defaults foe the fix objects such as fixDescription, checkName, "Pending" or "Ready" status.
 
-User calls Invoke-IssueCheck to run through all (or filtered) IssueChecks, executing each check.  Checks return 0 or more fix objects.  If the command returns Strings or ScriptBlocks these will be converted to Fix objects using New-IssueFix using the defaults saved with the IssueCheck.  Depending on invoke parameters, any fixes returned in the "Ready" state will be executed in sequenceNumber order.  They will also be returned as results and may (parameter) be added to the database.  Fixes are executed after each check, before the next check to allow check processes to build on each other.
+User calls Invoke-IssueCheck to run through all (or filtered) IssueChecks, executing each check.  Checks return 0 or more fix objects.  If the command returns Strings or ScriptBlocks these will be converted to Fix objects using New-IssueFix using the defaults saved with the IssueCheck.  Depending on invoke parameters, any fixes returned in the "Ready" state will be executed in sequenceNumber order.  They will also be returned as results .  Fixes are executed after each check, before the next check to allow check processes to build on each other.
 
-Checks can be run multiple times but will only allow one fix to exist by comparing the fixCommand.  The Invoke-IssueCheck, by parameter, can run through the checks repeatedly until no new fixes are generated.  This allows checks to build upon each other and respond to fixes.  It also allows for single notification of issues.
+Checks can be run multiple times but will only allow one fix to exist by comparing the iD which is a hash of fixCommand.  The Invoke-IssueCheck, by parameter, can run through the checks repeatedly until no new fixes are generated.  This allows checks to build upon each other and respond to fixes.  It also allows for single notification of issues.
 
-After invoking, the user can review the results either by iterating the return or by querying the database with Get-IssueFix.
+After invoking, the user can review the results either by iterating the return or by querying the database with Read-IssueFix.
 
 Fixes in the "Pending" state can be changed to "Ready" through either the Set-IssueFix or the Complete-IssueFix cmdlets.  If instead a fix should be skipped or canceled, use either Set-IssueFix changing status to "Canceled".
 
@@ -108,13 +120,15 @@ When finished a notification of all fixes, either still pending or finished, can
 
 If all done, fixes that are completed or errored can be removed using Remove-IssueFix, from the database, allowing those same fixes to be presented again.  For example, an issue can be raised, addressed and then removed so the user can be notified if it comes up again.
 
+Better yet, comoleted fixes can be archived using Archive-IssueFix to maintain a record of fixes executed.
+
 ## Scheduled
 Most issues processes will be scheduled.  In fact there coukd be different databases for different schedules.
 
 The scheduled job will:
 1) Invoke-IssueCheck using saved database
 2) Send-IssueFixMail notifications
-3) Remove-IssueFix fixes that have completed or errored, perhaps based on the notificationCount.
+3) Archive-IssueFix fixes that have completed or errored, perhaps based on the notificationCount.
 
 Users then recieve the the notification and can review both ezecuted fixes and "Pendong" fixes.  The user can use fix cmdlets to change the status of pending fixes which will then be processed at the next scheduled Invoke.
 
