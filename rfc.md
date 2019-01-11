@@ -37,7 +37,7 @@ The IssueFix object contains:
 + path (string) Add/updated by Read/Write-IssueCheck if saved as a standalone file.
 
 # Sequence Number
-Both the IssueCheck and the IssueFix have sequence numbers.  IssueFix also has a combinedSequenceNumber.  If the IssueCheck object is available to the IssueFix, then the combinedSequenceNumber is calculated at creation from the IssueCheck.sequenceNumber multiplied by 1,000,000,000 plus the IssueFix sequenceNumber.  If not, the combinedSequenceNumber is the same as sequenceNumber.  It is this combinedSequenceNumber that is used for sorting fixes.
+Both the IssueCheck and the IssueFix have sequence numbers that are used for sorting checks and fixes.
 
 # Notification Count
 Each time a notificaton is sent for a fix the notificationCount is decremented by one. By default, only fixes with a notification count greater then 0 are sent. This allows for control over how often a fix is notified about.  If the IssueCheck/IssueFix creator does not want any notifications sent (by default), set to 0.  If only want to be notified once, set to 1.  The notification cmdlets provide control over when this value is used.  For example, parameters allow only using the notification count for "Pending" fixes and instead setting "Completed/Error" fixes to 0 after first notification.  Or the notification cmdlet can send for all fixes and ignore this value.
