@@ -24,9 +24,8 @@ The IssueCheck object contains:
 A fix is a ScriptBlock to make the change recomended by the fix.  It supports a number of features to allow for reviewing and documenting the fixes.
 
 The IssueFix object contains:
-+ Id (GUID) calculated feom a hash of fixCommand
++ iD (GUID) calculated feom a hash of fixCommand
 + sequenceNumber (Long Int)
-+ combinedSequenceNumber (Long Int)
 + checkName (String)
 + fixCommand (ScriptBlock)
 + fixDescription (String)
@@ -90,7 +89,7 @@ The data will be stored in a folder with each object stored as a seperate JSON f
 
 It will be important to Write any changed objects back to the database.  Thus any commands using the database should always end the pipeline with a Write cmdlet.
 
-Each object when Read or after being writtend to the database will have a databasePath property added.  This property can be supplied by property value to future write cmdlets to easily resave a changed object.
+Each object when Read or after being writtened to the database will have a databasePath property added.  This property can be supplied by property value to future write cmdlets to easily re-save a changed object.
 ##Folders
 Each Write cmdlet will save to a different folder, creating the folders as needed.
 ###Checks
