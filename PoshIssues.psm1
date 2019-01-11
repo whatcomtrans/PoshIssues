@@ -70,8 +70,8 @@ function New-IssueFix {
                 Add-Member -InputObject $_return -MemberType NoteProperty -Name "fixDescription" -Value $FixDescription
                 Add-Member -InputObject $_return -MemberType NoteProperty -Name "checkName" -Value $CheckName
                 Add-Member -InputObject $_return -MemberType NoteProperty -Name "_status" -Value ([Int64] $Status)
-                Add-Member -InputObject $_return -MemberType NoteProperty -Name "notificationCount" -Value $NotificationCount
-                Add-Member -InputObject $_return -MemberType NoteProperty -Name "sequenceNumber" -Value $SequenceNumber
+                Add-Member -InputObject $_return -MemberType NoteProperty -Name "notificationCount" -Value ([Int64] $NotificationCount)
+                Add-Member -InputObject $_return -MemberType NoteProperty -Name "sequenceNumber" -Value ([Int64] $SequenceNumber)
 
                 #Calculate iD
                 $StringBuilder = New-Object System.Text.StringBuilder 
@@ -107,7 +107,7 @@ function Write-IssueFix {
                 [String] $DatabasePath,
                 [Parameter(Mandatory=$true,Position=1,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$true, ParameterSetName="Path")]
                 [String] $Path,
-                [Parameter(Mandatory=$false,Position=2,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
+                [Parameter(Mandatory=$false,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
                 [Switch] $Force
 	)
 	Process {
@@ -147,10 +147,10 @@ function Write-IssueFix {
                 TODO: Think about when to overwrite and when to skip.  Goal is to prevent duplicate Fix objects 
                 from being created/saved when a Check generates a duplicate.  Is this the correct place to catch this?
                 Does catching it here require excesive use of the Force command to catch legitimate changes (status. etc)?
-                Should I only check if no DatabasePath/Path set on the object already?
+                Should I only check if no DatabasePath/Path is not set on the object already?
                 #>
 
-                #If the file exists AND we Force is False/not set do not write the file
+                #If the file exists AND Force is False/not set do not write the file
                 if ((Test-Path $_path) -and ($_Force -eq $false)) {
                         Write-Verbose "JSON file already exists at '$_path'.  Will not overwrite unless Force is set."
                 } else {
@@ -207,25 +207,39 @@ function Archive-IssueFix {
                 [String] $DatabasePath,
                 [Parameter(Mandatory=$true,Position=1,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$true, ParameterSetName="Path")]
                 [String] $Path,
-                [Parameter(Mandatory=$false,Position=2,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
+                [Parameter(Mandatory=$true,Position=2,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$true, ParameterSetName="Path")]
+                [String] $ArchivePath,
+                [Parameter(Mandatory=$false,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
                 [Switch] $Force
 	)
 	Process {
                 $_path = ""
+                $_destinationPath = ""
                 #Calculate path
                 If ($DatabasePath) {
                         $_path = "$($DatabasePath)\Fixes\$($Fix.id).json"
+                        $_destinationPath = "$($DatabasePath)\Fixes\Archive\$($Fix.id)_$(Get-Date -Format yyyyMMddHHmmss).json"
+                        if (!(Test-Path $DatabasePath)) {
+                                New-Item $DatabasePath -ItemType Directory
+                        }
+                        if (!(Test-Path "$($DatabasePath)\Fixes")) {
+                                New-Item "$($DatabasePath)\Fixes" -ItemType Directory
+                        }
+                        if (!(Test-Path "$($DatabasePath)\Fixes\Archive")) {
+                                New-Item "$($DatabasePath)\Fixes\Archive" -ItemType Directory
+                        }
                  } else {
                         $_path = $Path
+                        $_destinationPath = $ArchivePath
                 }
                 if ($_path -eq "") {
                         Write-Error "Unable to determine path to saved Fix"
                 } else {
                         if (Test-Path $_path) {
                                 if ($PSCmdlet.ShouldProcess("Remove $($Fix.fixDescription) from file/database?")) {
-                                        #Delete the JSON file
+                                        #Move the JSON file
                                         Write-Verbose "Removed $_path"
-                                        Move-Item -Path $_path -Destination $_path #TODO: Need to set destination based...
+                                        Move-Item -Path $_path -Destination $_destinationPath
                                 }
                         } else {
                                 Write-Warning "Saved Fix JSON file not found at $_path"
@@ -241,19 +255,62 @@ function Read-IssueFix {
 	Param(
 		[Parameter(Mandatory=$true,Position=1,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$true, ParameterSetName="DatabasePath")]
                 [String] $DatabasePath,
+                [Parameter(Mandatory=$false,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false,ParameterSetName="DatabasePath")]
+                [Switch] $IncludeArchive,
+                [Parameter(Mandatory=$false,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false,ParameterSetName="DatabasePath")]
+                [Switch] $OnlyArchive,
                 [Parameter(Mandatory=$true,Position=1,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$true, ParameterSetName="Path")]
-                [String] $Path,
-                [Parameter(Mandatory=$false,Position=2,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
-                [Switch] $Archive
+                [String] $Path
         )
-        Begin {
-                #Put begining stuff here
-	}
 	Process {
-                #Put process here
-	}
-	End {
-                #Put end here
+                $items = @()
+                if ($Path) {
+                        $items = Get-Item $Path
+                } elseif ($DatabasePath) {
+                        $_folder = "$($DatabasePath)\Fixes"
+                        if ($OnlyArchive) {
+                                $_folder = "$($_folder)\Archive"
+                        }
+                        if ($IncludeArchive) {
+                                $_recurse = $true
+                        } else {
+                                $_recurse = $false
+                        }
+                        $items = Get-ChildItem -Path $_folder -Recurse:$_recurse -Filter "*.json"
+                }
+                $items | Get-Content -Raw | ConvertFrom-Json | ForEach-Object {
+                        #Take the object from the JSON import and build a fix object
+                        $_fix = $_
+                        $_return = New-Object -TypeName PSObject
+                        $_return.PSObject.TypeNames.Insert(0,'PoshIssues.Fix')
+                        [ScriptBlock] $_script = [ScriptBlock]::Create([System.Text.Encoding]::Unicode.GetString([System.Convert]::FromBase64String($_fix.fixCommandBase64)))
+                        Add-Member -InputObject $_return -MemberType NoteProperty -Name "fixCommand" -Value $_script
+                        Add-Member -InputObject $_return -MemberType NoteProperty -Name "fixDescription" -Value $_fix.fixDescription
+                        Add-Member -InputObject $_return -MemberType NoteProperty -Name "checkName" -Value $_fix.checkName
+                        Add-Member -InputObject $_return -MemberType NoteProperty -Name "_status" -Value ([Int64] $_fix.statusInt)
+                        Add-Member -InputObject $_return -MemberType NoteProperty -Name "notificationCount" -Value ([Int64] $_fix.notificationCount)
+                        Add-Member -InputObject $_return -MemberType NoteProperty -Name "sequenceNumber" -Value ([Int64] $_fix.sequenceNumber)
+                        Add-Member -InputObject $_return -MemberType NoteProperty -Name "iD" -Value $_fix.id
+                        Add-Member -InputObject $_return -MemberType NoteProperty -Name "databasePath" -Value $DatabasePath -Force
+
+                        if ("fixResults" -in $_fix.PSobject.Properties.Name) {
+                                Add-Member -InputObject $_return -MemberType NoteProperty -Name "fixResults" -Value $_fix.fixResults -Force
+                        }
+
+                        #TODO: Add an archived flag?
+
+                        Add-Member -InputObject $_return -MemberType ScriptProperty -Name "status" -Value `
+                        { #Get
+                                return [IssueFixStatus]::([enum]::getValues([IssueFixStatus]) | Where-Object value__ -eq $this._status)
+                        } `
+                        { #Set
+                                param (
+                                [IssueFixStatus] $status
+                                )
+                                $this._status = ([IssueFixStatus]::$Status).value__
+                        }
+                        Write-Output $_return
+                } | Write-Output
 	}
 }
 
