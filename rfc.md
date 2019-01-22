@@ -76,6 +76,8 @@ Changes status property of a PSObject<PoshIssues.Fix> object to "Cancel".
 Executes a PSObject<PoshIssues.Fix> object's script block, updating results and status.
 ### Archive-IssueFix
 Moves a saved IssueFix file into the Archive folder of the database and updates filename to include the execution date.
+### Invoke-IssueFix
+Invokes the fix PowerShell ScriptBlock associated with the fix, storing the results and updating the status.  Unless forced, will only process those that have a Ready status.
 
 ## Notification
 Support sending notification of either/both completed and pending fixes.  Starting off with email bit could add other channels.
