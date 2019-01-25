@@ -80,6 +80,9 @@ Executes a PSObject<PoshIssues.Fix> object's script block, updating results and 
 Moves a saved IssueFix file into the Archive folder of the database and updates filename to include the execution date.
 ### Invoke-IssueFix
 Invokes the fix PowerShell ScriptBlock associated with the fix, storing the results and updating the status.  Unless forced, will only process those that have a Ready status.
+### Limit-IssueFix
+Limits fixes to one per fix by sorting through the piped input removing duplicate Fixes, keeping the oldest.  Used to prevent the same fix from being fired multiple times.
+
 
 ## Notification
 Support sending notification of either/both completed and pending fixes.  Starting off with email bit could add other channels.
