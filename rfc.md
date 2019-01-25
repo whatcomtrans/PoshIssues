@@ -70,7 +70,7 @@ Removes a PSObject<PoshIssues.Fix> object file from a database folder.
 Imoorts a PSObject<PoshIssues.Fix> object from a database folder.
 ### Set-IssueFix
 Changes properties of a PSObject<PoshIssues.Fix> object.
-### Complete-IssueFix
+### Approve-IssueFix
 Changes status property of a PSObject<PoshIssues.Fix> object to "Ready".  Used as a verb to change from Pending or Canceled to Ready.
 ### Cancel-IssueFix
 Changes status property of a PSObject<PoshIssues.Fix> object to "Cancel".
