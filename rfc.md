@@ -35,8 +35,7 @@ The IssueFix object contains:
 + databasePath (string) Add/updated by Read/Write-IssueCheck if saved to a database folder.
 + path (string) Add/updated by Read/Write-IssueCheck if saved as a standalone file.
 + creationDateTime (DateTime) Date and time when the fix object is created.
-+ resultsDateTime (DateTime) Date and time when the results were generated.
-+ statusDateTime (DateTime) Date and time when status with updated.  Often matches either the creation or results but will deviate for Pending and Canceled.
++ statusDateTime (DateTime) Date and time when status was updated.
 
 # Sequence Number
 Both the IssueCheck and the IssueFix have sequence numbers that are used for sorting checks and fixes.
