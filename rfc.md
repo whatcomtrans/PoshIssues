@@ -72,7 +72,7 @@ Imoorts a PSObject<PoshIssues.Fix> object from a database folder.
 Changes properties of a PSObject<PoshIssues.Fix> object.
 ### Approve-IssueFix
 Changes status property of a PSObject<PoshIssues.Fix> object to "Ready".  Used as a verb to change from Pending or Canceled to Ready.
-### Cancel-IssueFix
+### Deny-IssueFix
 Changes status property of a PSObject<PoshIssues.Fix> object to "Cancel".
 ### Invoke-IssueFix
 Executes a PSObject<PoshIssues.Fix> object's script block, updating results and status.
