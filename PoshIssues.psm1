@@ -13,31 +13,35 @@ enum IssueCheckStatus {
 
 <#
 .SYNOPSIS
-Creates a new IssueFix object with the passed parameters, using defaults, when provided, from the optional IssueCheck and/or IssueDatabase.
+Creates a new IssueFix object with the passed parameters
 
 .DESCRIPTION
-Creates a new IssueFix object with the passed parameters, using defaults, when provided, from the optional IssueCheck and/or IssueDatabase.
+Creates a new IssueFix object with the passed parameters, using defaults as needed.
 
 .PARAMETER FixCommand
-A ScriptBlock, String that can be converted to a ScriptBlock or arrays of Strings/ScriptBlocks to be added to that fix that will be executed to fix the issue.
+A ScriptBlock to be added to that fix that will be executed to fix the issue.
+
+.PARAMETER FixCommandString
+A String that can be converted to a ScriptBlock to be added to that fix that will be executed to fix the issue.
 
 .PARAMETER FixDescription
 A user friendly description of what the fix does, prefereble specific to this instance.
 
+.PARAMETER CheckName
+Name of the issue check that generated this fix.
+
 .PARAMETER Status
-The status of this fix.  See IssueFixStatus enum.
+The status of this fix.  See IssueFixStatus enum.  Default is Ready.
 
 .PARAMETER NotificationCount
-Set the number of times notices is sent about this fix.  Usefull for scheduled notifications of pending fixes.  Each time a notificaton is sent for a fix the notificationCount is decremented by one. By default, only fixes with a notification count greater then 0 are sent. This allows for control over how often a fix is notified about.
+Set the number of times notices is sent about this fix.  Usefull for scheduled notifications of pending fixes.  Each time a notificaton is sent for a fix the notificationCount is decremented by one. By default, only fixes with a notification count greater then 0 are sent. This allows for control over how often a fix is notified about.  Default is 10000.
 
 .PARAMETER SequenceNumber
-Fix sort order.  Default is the IssueCheck's lastFixSequenceNumber
-
-.PARAMETER CheckName
-Name of the issue check that generated this fix.  Provide either CheckName or CheckIssue.  If Database or DatabasePath is provided, will attempt to lookup the associated IssueCheck object from the database.  Otherwise, just stores the name.
+Fix sort order.  Default is 1.
 
 .INPUTS
-ScriptBlock The fix.
+ScriptBlock representing the script that will be invoked by the fix
+String representing the script that will be invoked by the fix
 
 .OUTPUTS
 IssueFix The fix object(s) created by the cmdlet
@@ -101,6 +105,32 @@ function New-IssueFix {
 	}
 }
 
+<#
+.SYNOPSIS
+Writes (saves) an IssueFix object to the file system as a JSON file.
+
+.DESCRIPTION
+Writes (saves) an IssueFix object to the file system as a JSON file.  Supports saving to a specific Path or to a Database folder structure.
+
+.PARAMETER Fix
+IssueFix object(s), typically passed via the pipeline, to be written to the file system as a JSON object.
+
+.PARAMETER DatabasePath
+A string path representing the folder to use as a simple database.  The IssueFix files will be saved as JSON files using their iD value into a Fixes folder.  Folders will be created as needed.  If the IssueFix has already been saved once, the cmdlet can get the value from the pipeline object.
+
+.PARAMETER Path
+A string path representing the path and file name to save the JSON content as.  If the IssueFix has already been saved once, the cmdlet can get the value from the pipeline object.
+
+.PARAMETER NoClobber
+Switch to prevent an existing file from being overwritten, otherwise by default, the existing file is overwritten.
+
+.INPUTS
+IssueFix 
+
+.OUTPUTS
+IssueFix The fix object(s) passed through the cmdlet
+
+#>
 function Write-IssueFix {
 	[CmdletBinding(SupportsShouldProcess=$false,DefaultParameterSetName="DatabasePath")]
 	Param(
@@ -160,6 +190,29 @@ function Write-IssueFix {
 	}
 }
 
+<#
+.SYNOPSIS
+Removes (deletes) an IssueFix object from the file system.
+
+.DESCRIPTION
+Removes (deletes) an IssueFix object from the file system.  Can use the path information from the fix if present and passed through pipeline.  Just performs a remove-item.
+
+.PARAMETER Fix
+IssueFix object(s), typically passed via the pipeline, to be removed from the file system.
+
+.PARAMETER DatabasePath
+A string path representing the folder to use as a simple database.  The IssueFix files will be remvoed using their iD value from a Fixes folder.  Folders will be created as needed.  If the IssueFix has already been saved once, the cmdlet can get the value from the pipeline object.
+
+.PARAMETER Path
+A string path representing the path and file name to remove.  If the IssueFix has already been saved once, the cmdlet can get the value from the pipeline object.
+
+.INPUTS
+IssueFix 
+
+.OUTPUTS
+IssueFix The fix object(s) passed through the cmdlet
+
+#>
 function Remove-IssueFix {
 	[CmdletBinding(SupportsShouldProcess=$true,DefaultParameterSetName="DatabasePath")]
 	Param(
@@ -195,6 +248,36 @@ function Remove-IssueFix {
                 Write-Output $Fix
 	}
 }
+
+<#
+.SYNOPSIS
+Archives (moves) an IssueFix object in the file system.
+
+.DESCRIPTION
+Archives (moves) an IssueFix object in the file system.  File must have previousely been written to file system.  Can use the path information from the fix if present and passed through pipeline.  Just performas a move-item.
+
+.PARAMETER Fix
+IssueFix object(s), typically passed via the pipeline, to be moved to archive location.
+
+.PARAMETER DatabasePath
+A string path representing the folder to use as a simple database.  The IssueFix files will be moved to an Archive folder under the Fixes folder and the filename will be appended with the current datatime.  Folders will be created as needed.  If the IssueFix has already been saved once, the cmdlet can get the value from the pipeline object.
+
+.PARAMETER Path
+A string path representing the path and file name to current JSON file.  If the IssueFix has already been saved once, the cmdlet can get the value from the pipeline object.
+
+.PARAMETER Path
+A string path representing the path and file name to move the file to.
+
+.PARAMETER Force
+Switch to force overwritting any existing file.
+
+.INPUTS
+IssueFix 
+
+.OUTPUTS
+IssueFix The fix object(s) passed through the cmdlet
+
+#>
 function Archive-IssueFix {
 	[CmdletBinding(SupportsShouldProcess=$true,DefaultParameterSetName="DatabasePath")]
 	Param(
@@ -233,10 +316,10 @@ function Archive-IssueFix {
                         Write-Error "Unable to determine path to saved Fix"
                 } else {
                         if (Test-Path $_path) {
-                                if ($PSCmdlet.ShouldProcess("Remove $($Fix.fixDescription) from file/database?")) {
+                                if ($PSCmdlet.ShouldProcess("Move $($Fix.fixDescription) to $_destinationPath?")) {
                                         #Move the JSON file
-                                        Write-Verbose "Removed $_path"
-                                        Move-Item -Path $_path -Destination $_destinationPath
+                                        Write-Verbose "Moved $_path to $_destinationPath"
+                                        Move-Item -Path $_path -Destination $_destinationPath -Force:$Force
                                 }
                         } else {
                                 Write-Warning "Saved Fix JSON file not found at $_path"
