@@ -411,7 +411,7 @@ function Read-IssueFix {
 function Set-IssueFix {
 	[CmdletBinding(SupportsShouldProcess=$true)]
 	Param(
-		[Parameter(Mandatory=$true,Position=0,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$false)]
+		[Parameter(Mandatory=$false,Position=0,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$false)]
                 [PSObject] $Fix,
                 [Parameter(Mandatory=$false,Position=1,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$true)]
                 [String] $FixDescription,
