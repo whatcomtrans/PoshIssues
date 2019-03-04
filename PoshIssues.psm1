@@ -141,7 +141,9 @@ function Write-IssueFix {
                 [Parameter(Mandatory=$true,Position=1,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$true, ParameterSetName="Path")]
                 [String] $Path,
                 [Parameter(Mandatory=$false,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
-                [Switch] $NoClobber
+                [Switch] $NoClobber,
+                [Parameter(Mandatory=$false,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
+                [Switch] $PassThru
 	)
 	Process {
                 #Make sure we got a fix passed
@@ -182,13 +184,16 @@ function Write-IssueFix {
                         #If the file exists AND NoClobber is true not write the file
                         if ((Test-Path $_path) -and ($NoClobber)) {
                                 Write-Verbose "JSON file already exists at '$_path' and NoClobber is set."
+                                if ($passthru) {
+                                        Write-Output $Fix
+                                }
                         } else {
                                 $_json = ConvertTo-Json -InputObject $_fix
                                 Out-File -FilePath $_path -Force:$true -InputObject $_json
                                 Write-Verbose "JSON saved to '$_path'."
+                                
+                                Write-Output $Fix
                         }
-
-                        Write-Output $Fix
                 }
 	}
 }
