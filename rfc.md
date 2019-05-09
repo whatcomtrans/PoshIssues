@@ -59,15 +59,15 @@ Add, changes, removes, enables or disables different checks stored in the databa
 ### Read-IssueCheck
 
 ## Fixes
-Review, cancel or complete, remove issue fixes.  Fixes in a pending state can be canceled or completed.  Fixes can come from results or be loaded from files or the database.  Fixes that are automatically executed ("Completed" or "Error" states) can not be canceled or completed, only those in a "Pending" state.  New-IssueFix creates a fix object for return and use in checks script blocks or for direclty.
+Review, cancel or complete, remove issue fixes.  Fixes in a pending state can be canceled or completed.  Fixes can come from results or be loaded from files or the database.  Fixes that are automatically executed ("Completed" or "Error" states) can not be canceled or completed, only those in a "Pending" state.  New-IssueFix creates a fix object for return and use in checks script blocks or for direclty.  All cmdlets passthru any fix objects on the pipeline.
 ### New-IssueFix
 Returns a PSObject<PoshIssues.Fix> object.
 ### Write-IssueFix
-Saves a PSObject<PoshIssues.Fix> object to a file or in a database folder.
+Saves a PSObject<PoshIssues.Fix> object to a file or in a database folder.  Use PassThru switch with NoClobber to get all Fixes passed thru, otherwise only Fixes written are passed thru.
 ### Remove-IssueFix
 Removes a PSObject<PoshIssues.Fix> object file from a database folder.
 ### Read-IssueFix
-Imoorts a PSObject<PoshIssues.Fix> object from a database folder.
+Imports a PSObject<PoshIssues.Fix> object from a database folder.
 ### Set-IssueFix
 Changes properties of a PSObject<PoshIssues.Fix> object.
 ### Approve-IssueFix
@@ -146,20 +146,3 @@ Note, the module currently does not have a method for removing a fix that is res
 Don't let the words "issue" or "fix" limit how this module can be used.
 
 For example one of the first uses of this module was to keep Active Directory up to date with a HR system.  So the check compares all employee AD User object titles with those that are set in the HR database.  Fixes with a "Set-ADUser -Identity [distinguishedName] -Title [new title]" are generated for each descrepency.  These fixes are either executed imediately ("Ready") or await review ("Pending").  In either case IT is notified through email.
-
-# Common Cmdlet Parameters
-
-## Database Parameters
-All cmdlets except New-IssueFix take the datatbase parameters.  Use either Database or DatabasePath.  However the database parameters are not required.  If not provided, the cmdlets will not save the created/modified objects.
-
-### Database
-Takes a database object, preventing it feom having to be imported and saved each time.  Most cmdlets return the results but when combined with -PassThru switch parameter, the cmdlet will return the datatbasr object instead.  Database may be piped in.
-
-### PassThru
-Used to return the database object rather then the resulting objects.
-
-### DatabasePath
-The full path and filename of the database file.  When this is used the cmdlet will use the import and export cmdlets to load and save the database to this file.
-
-### ReadOnly
-The ReadOnly switch will not modify the database object.  It will not save back to the database path or create a lock file on import.
