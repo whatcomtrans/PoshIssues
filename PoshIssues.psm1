@@ -124,6 +124,9 @@ A string path representing the path and file name to save the JSON content as.  
 .PARAMETER NoClobber
 Switch to prevent an existing file from being overwritten, otherwise by default, the existing file is overwritten.
 
+.PARAMETER PassThru
+Use PassThru switch with NoClobber to get all Fixs passed thru, otherwise only Fixs written are passed thru.
+
 .INPUTS
 IssueFix 
 
@@ -344,6 +347,47 @@ function Archive-IssueFix {
 	}
 }
 
+<#
+.SYNOPSIS
+Reads an IssueFix object from the file system.
+
+.DESCRIPTION
+Reads an IssueFix object from the file system.  File must have previousely been written to file system.
+
+.PARAMETER DatabasePath
+A string path representing the folder to use as a simple database.  The IssueFix files will be moved to an Archive folder under the Fixes folder and the filename will be appended with the current datatime.  Folders will be created as needed.  If the IssueFix has already been saved once, the cmdlet can get the value from the pipeline object.
+
+.PARAMETER IncludeArchive
+Include IssueFix files archived in the database. (all)
+
+.PARAMETER OnlyArchive
+Read just from the database archive.
+
+.PARAMETER Path
+A string path representing the path and file name to current JSON file.  If the IssueFix has already been saved once, the cmdlet can get the value from the pipeline object.
+
+.PARAMETER Path
+A string path representing the path and file name to move the file to.
+
+.PARAMETER isPending
+Switch to return only IssueFix objects where status is Pending.
+
+.PARAMETER isComplete
+Switch to return only IssueFix objects where status is Complete.
+
+.PARAMETER isReady
+Switch to return only IssueFix objects where status is Ready.
+
+.PARAMETER isError
+Switch to return only IssueFix objects where status is Error.
+
+.PARAMETER isCanceled
+Switch to return only IssueFix objects where status is Canceled.
+
+.OUTPUTS
+IssueFix The fix object(s) read from file system
+
+#>
 function Read-IssueFix {
 	[CmdletBinding(SupportsShouldProcess=$true,DefaultParameterSetName="DatabasePath")]
 	Param(
@@ -354,7 +398,17 @@ function Read-IssueFix {
                 [Parameter(Mandatory=$false,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false,ParameterSetName="DatabasePath")]
                 [Switch] $OnlyArchive,
                 [Parameter(Mandatory=$true,Position=1,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$true, ParameterSetName="Path")]
-                [String] $Path
+                [String] $Path,
+                [Parameter(Mandatory=$false,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
+                [Switch] $isPending,
+                [Parameter(Mandatory=$false,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
+                [Switch] $isComplete,
+                [Parameter(Mandatory=$false,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
+                [Switch] $isReady,
+                [Parameter(Mandatory=$false,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
+                [Switch] $isError,
+                [Parameter(Mandatory=$false,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
+                [Switch] $isCanceled
         )
 	Process {
                 $items = @()
@@ -403,7 +457,27 @@ function Read-IssueFix {
                                 )
                                 $this._status = ([IssueFixStatus]::$Status).value__
                         }
-                        Write-Output $_return
+                        if ($isPending -or $isComplete -or $isReady -or $isError -or $isCanceled) {
+                                # filtering results based on status
+                                if ($isPending -and ($_return.status -eq 'Pending')) {
+                                        Write-Output $_return
+                                }
+                                if ($isComplete -and ($_return.status -eq 'Complete')) {
+                                        Write-Output $_return
+                                }
+                                if ($isReady -and ($_return.status -eq 'Ready')) {
+                                        Write-Output $_return
+                                }
+                                if ($isError -and ($_return.status -eq 'Error')) {
+                                        Write-Output $_return
+                                }
+                                if ($isCanceled -and ($_return.status -eq 'Canceled')) {
+                                        Write-Output $_return
+                                }
+                        } else {
+                                # return all
+                                Write-Output $_return
+                        }
                 } | Write-Output
 	}
 }

@@ -127,6 +127,30 @@ describe "Read-IssueFix" {
         ($fix | Measure-Object).Count | should be 2
     }
 
+    it "should read Pending IssueFix(s) from the database" {
+        $DatabasePath = "C:\Localstuff\Issues"
+
+        Get-ChildItem "$($DatabasePath)\Fixes" -File | Remove-Item
+
+        New-IssueFix -FixCommand {echo "Hello World"} -FixDescription "First fix" -CheckName "Greetings" -Status Ready | Write-IssueFix -DatabasePath $DatabasePath
+        New-IssueFix -FixCommand {echo "Hello Josh"} -FixDescription "First fix" -CheckName "Greetings" -Status Pending | Write-IssueFix -DatabasePath $DatabasePath
+
+        $fix = Read-IssueFix -DatabasePath $DatabasePath -isPending
+        ($fix | Measure-Object).Count | should be 1
+    }
+
+    it "should read Complete IssueFix(s) from the database" {
+        $DatabasePath = "C:\Localstuff\Issues"
+
+        Get-ChildItem "$($DatabasePath)\Fixes" -File | Remove-Item
+
+        New-IssueFix -FixCommand {echo "Hello World"} -FixDescription "First fix" -CheckName "Greetings" -Status Ready | Write-IssueFix -DatabasePath $DatabasePath
+        New-IssueFix -FixCommand {echo "Hello Josh"} -FixDescription "First fix" -CheckName "Greetings" -Status Complete | Write-IssueFix -DatabasePath $DatabasePath
+
+        $fix = Read-IssueFix -DatabasePath $DatabasePath -isComplete
+        ($fix | Measure-Object).Count | should be 1
+    }
+
     it "should read IssueFix(s) from the path" {
         $fix = New-IssueFix -FixCommand {echo "Hello World"} -FixDescription "First fix" -CheckName "Greetings"
         $filePath = "C:\Localstuff\testIssue.json"
