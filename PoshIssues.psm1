@@ -125,7 +125,7 @@ A string path representing the path and file name to save the JSON content as.  
 Switch to prevent an existing file from being overwritten, otherwise by default, the existing file is overwritten.
 
 .PARAMETER PassThru
-Use PassThru switch with NoClobber to get all Fixs passed thru, otherwise only Fixs written are passed thru.
+Use PassThru switch with NoClobber to get all Fixes passed thru, otherwise only Fixes written are passed thru.
 
 .INPUTS
 IssueFix 
