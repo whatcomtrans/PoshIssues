@@ -184,6 +184,10 @@ describe "should change IssueFix object" {
         ($fix | Set-IssueFix -SequenceNumber 66).sequenceNumber | should be 66
     }
 
+    it "should change the NofiticationCount of the IssueFix by 1" {
+        $fix = New-IssueFix -FixCommand {echo "Hello World"} -FixDescription "First fix" -CheckName "Greetings" -NotificationCount 101
+        ($fix | Set-IssueFix -DecrementNotificationCount).notificationCount | should be 100
+    }
 }
 
 describe "Approve-IssueFix" {
@@ -253,5 +257,25 @@ describe "Limit-IssueFix" {
     it "should only return the unique IssueFix objects" {
         $results = $fixes | Limit-IssueFix
         ($results | Measure-Object).Count | Should be 2
+    }
+}
+
+describe "Send-IssueMailMessage" {
+    $fixes = @()
+    $fixes += New-IssueFix -FixCommand {echo "Hello Completed"} -FixDescription "Completed fix" -CheckName "Greetings" -Status Complete -NotificationCount 1
+    $fixes += New-IssueFix -FixCommand {echo "Hello Pending 1"} -FixDescription "Pending fix 1" -CheckName "Greetings" -Status Pending -NotificationCount 1
+    $fixes += New-IssueFix -FixCommand {echo "Hello Pending 2"} -FixDescription "Pending fix 2" -CheckName "Greetings" -Status Pending
+    $fixes += New-IssueFix -FixCommand {echo "Hello Error"} -FixDescription "Error fix" -CheckName "Greetings" -Status Error -NotificationCount 1
+
+    it "Message should be sent and four fixes returned" {
+        $results = $fixes | Send-IssueMailMessage
+        #Save fixes with notification counts decremented for next test
+        $fixes = $results
+        ($results | Measure-Object).Count | Should be 4
+    }
+
+    it "Message should be sent and 1 fixe returned" {
+        $results = $fixes | Send-IssueMailMessage
+        ($results | Measure-Object).Count | Should be 1
     }
 }

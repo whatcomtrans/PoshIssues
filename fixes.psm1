@@ -482,6 +482,40 @@ function Read-IssueFix {
 	}
 }
 
+<#
+.SYNOPSIS
+Change issue fix properties.
+
+.DESCRIPTION
+Allows for changing certain properties of an issue fix object.
+
+.PARAMETER Fix
+The issue fix object to change, typically passed via pipeline.
+
+.PARAMETER FixDescription
+Set the description of the fix to STRING value.
+
+.PARAMETER CheckName
+Set the name of the fix to STRING value.
+
+.PARAMETER Status
+Set the status of the fix to STRING value.
+
+.PARAMETER NotificationCount
+Set the notification count of the fix to INT value.
+
+.PARAMETER SequenceNumber
+Set the sequence number of the fix to INT value.
+
+.EXAMPLE
+Set-IssueFix -Fix $aFixObject -Description "This is an issue fix with a new description."
+
+.INPUTS
+IssueFix 
+
+.OUTPUTS
+IssueFix The changed fix object(s)
+#>
 function Set-IssueFix {
 	[CmdletBinding(SupportsShouldProcess=$true)]
 	Param(
@@ -496,7 +530,9 @@ function Set-IssueFix {
                 [Parameter(Mandatory=$false,Position=4,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$true)]
                 [System.Int64] $NotificationCount,
                 [Parameter(Mandatory=$false,Position=5,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$true)]
-                [System.Int64] $SequenceNumber
+                [System.Int64] $SequenceNumber,
+                [Parameter(Mandatory=$false,Position=6,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
+                [Switch] $DecrementNotificationCount
 	)
 	Begin {
         #Put begining stuff here
@@ -525,6 +561,9 @@ function Set-IssueFix {
                                 if ($SequenceNumber) {
                                         $Fix.sequenceNumber = $SequenceNumber
                                 }
+                                if ($DecrementNotificationCount) {
+                                        $Fix.notificationCount = $Fix.notificationCount - 1
+                                }
                         }
                         Write-Output $Fix
                 }
@@ -533,6 +572,27 @@ function Set-IssueFix {
         #Put end here
 	}
 }
+
+<#
+.SYNOPSIS
+Sets the fix status to Ready.
+
+.DESCRIPTION
+Sets the issue fix object status to Ready.  Typically used on those whose status is Pending.
+
+.PARAMETER Fix
+The issue fix object to change, typically passed via pipeline.
+
+.EXAMPLE
+Read-IssueFix -isPending | Approve-IssueFix | Write-IssueFix
+
+.INPUTS
+IssueFix 
+
+.OUTPUTS
+IssueFix The approved fix object(s)
+
+#>
 
 function Approve-IssueFix {
 	[CmdletBinding(SupportsShouldProcess=$true)]
@@ -552,6 +612,27 @@ function Approve-IssueFix {
 	}
 }
 
+<#
+.SYNOPSIS
+Sets the issue fix status to Canceled.
+
+.DESCRIPTION
+Sets the issue fix object status to Canceled.  Typically used on those whose status is Pending.
+
+.PARAMETER Fix
+The issue fix object to change, typically passed via pipeline.
+
+.EXAMPLE
+Read-IssueFix -isPending | Deny-IssueFix | Write-IssueFix
+
+.INPUTS
+IssueFix 
+
+.OUTPUTS
+IssueFix The denied fix object(s)
+
+#>
+
 function Deny-IssueFix {
 	[CmdletBinding(SupportsShouldProcess=$true)]
 	Param(
@@ -569,6 +650,37 @@ function Deny-IssueFix {
                 }
 	}
 }
+
+<#
+TODO:  Need to finish documenting this cmdlet
+.SYNOPSIS
+Short description
+
+.DESCRIPTION
+Long description
+
+.PARAMETER Fix
+The issue fix object to change, typically passed via pipeline.
+
+.PARAMETER Force
+Parameter description
+
+.PARAMETER NoNewScope
+Parameter description
+
+.EXAMPLE
+An example
+
+.NOTES
+General notes
+
+.INPUTS
+IssueFix 
+
+.OUTPUTS
+IssueFix The fix object(s) passed through the cmdlet
+
+#>
 
 function Invoke-IssueFix {
 	[CmdletBinding(SupportsShouldProcess=$true, ConfirmImpact='Medium')]
@@ -589,11 +701,13 @@ function Invoke-IssueFix {
                                         try {
                                                 $Fix.fixResults = [String] (Invoke-Command -ScriptBlock $fix.fixCommand -NoNewScope:$NoNewScope)
                                                 $Fix.status = 2 #Complete
+                                                $Fix.notificationCount = 1
                                                 Write-Verbose "$($Fix.checkName): $($Fix.fixDescription) complete with following results: $($Fix.fixResults)"
                                         } catch {
                                                 #Error
                                                 $Fix.fixResults = [String] $_.Exception.Message
                                                 $Fix.status = 3 #Error
+                                                $Fix.notificationCount = 1
                                                 Write-Verbose "$($Fix.checkName): $($Fix.fixDescription) errored with following error: $($Fix.fixResults)"
                                         } finally {
                                                 $Fix.statusDateTime = Get-Date
@@ -604,6 +718,24 @@ function Invoke-IssueFix {
                 }
 	}
 }
+
+<#
+.SYNOPSIS
+Removes duplicate issue fix objects from pipeline.
+
+.DESCRIPTION
+Removes duplicate issue fix objects from pipeline.  Duplicates are matched by iD.  Only the oldest fix object of each matching by iD is passed on. 
+
+.PARAMETER Fix
+The issue fix object, only useful if a collection of them is passed via pipeline.
+
+.INPUTS
+IssueFix 
+
+.OUTPUTS
+IssueFix The fix object(s) passed through the cmdlet
+
+#>
 
 function Limit-IssueFix {
 	[CmdletBinding()]
