@@ -212,7 +212,6 @@ describe "Invoke-IssueFix" {
 
     $fix = New-IssueFix -FixCommand {echo (5 / 0)} -FixDescription "First error" -CheckName "Greetings"
 
-    #TODO: This is now not working...
     it "should return an error string" {
         $fix = $fix | Invoke-IssueFix
         $fix.fixResults | Should BeLike "Attempted to divide by zero*"
@@ -220,14 +219,6 @@ describe "Invoke-IssueFix" {
 
     it "should have updated the IssueFix status after results to be Completed" {
         $fix.status | should be "Error"
-    }
-
-    $fix = New-IssueFix -FixCommand {echo $message} -FixDescription "First error" -CheckName "Greetings"
-
-    it "should not change current scope" {
-        $message = "Hi"
-        $fix = $fix | Invoke-IssueFix
-        $fix.fixResults | Should be "Hi"
     }
 
     function Test-Echo {
