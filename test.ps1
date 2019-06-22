@@ -1,3 +1,5 @@
+. .\localTestValues.ps1
+
 #Load Pester
 Import-Module Pestr
 
@@ -21,15 +23,12 @@ describe "New-IssueFix" {
     it "should return a fix with an scriptblock" {
         $result2.fixCommand.InvokeReturnAsIs() | should be "Hello World"
     }
-
-    #TODO: What other tests should I write?
 }
 
 describe "Write-IssueFix" {
     $fix = New-IssueFix -FixCommand {echo "Hello World"} -FixDescription "First fix" -CheckName "Greetings"
 
     it "should create a JSON file in the database folder" {
-        $DatabasePath = "C:\Localstuff\Issues"
         #Delete file if it exists
         remove-item "$($DatabasePath)\Fixes\$($fix.id).json" -ErrorAction SilentlyContinue
         $result = $fix | Write-IssueFix -DatabasePath $DatabasePath
@@ -37,7 +36,6 @@ describe "Write-IssueFix" {
     }
 
     it "should create a JSON file at a specific location" {
-        $filePath = "C:\Localstuff\testIssue.json"
         #Delete file if it exists
         remove-item $filePath -ErrorAction SilentlyContinue
         $result = $fix | Write-IssueFix -Path $filePath
@@ -45,7 +43,6 @@ describe "Write-IssueFix" {
     }
 
     it "should return the fix object with path set for further pipeline usage with path added" {
-        $filePath = "C:\Localstuff\testIssue.json"
         #Delete file if it exists
         remove-item $filePath -ErrorAction SilentlyContinue
         $result = $fix | Write-IssueFix -Path $filePath
@@ -53,7 +50,6 @@ describe "Write-IssueFix" {
     }
 
     it "should return the fix object with databasePath set for further pipeline usage with path added" {
-        $DatabasePath = "C:\Localstuff\Issues"
         $filePath = "$($DatabasePath)\Fixes\$($fix.id).json"
         #Delete file if it exists
         remove-item $filePath -ErrorAction SilentlyContinue
@@ -66,7 +62,6 @@ describe "Remove-IssueFix" {
 
     it "should remove a JSON file in the database folder" {
         $fix = New-IssueFix -FixCommand {echo "Hello World"} -FixDescription "First fix" -CheckName "Greetings"
-        $DatabasePath = "C:\Localstuff\Issues"
         #Delete file if it exists
         remove-item "$($DatabasePath)\Fixes\$($fix.id).json" -ErrorAction SilentlyContinue
         $fix = $fix | Write-IssueFix -DatabasePath $DatabasePath
@@ -77,7 +72,6 @@ describe "Remove-IssueFix" {
 
     it "should remove a JSON file at a specific location" {
         $fix = New-IssueFix -FixCommand {echo "Hello World"} -FixDescription "First fix" -CheckName "Greetings"
-        $filePath = "C:\Localstuff\testIssue.json"
         #Delete file if it exists
         remove-item $filePath -ErrorAction SilentlyContinue
         $result = $fix | Write-IssueFix -Path $filePath
@@ -90,7 +84,6 @@ describe "Remove-IssueFix" {
 describe "Archive-IssueFix" {
     it "should move the fix to the database archive folder" {
         $fix = New-IssueFix -FixCommand {echo "Hello World"} -FixDescription "First fix" -CheckName "Greetings"
-        $DatabasePath = "C:\Localstuff\Issues"
         #Delete file if it exists
         remove-item "$($DatabasePath)\Fixes\$($fix.id).json" -ErrorAction SilentlyContinue
         $fix = $fix | Write-IssueFix -DatabasePath $DatabasePath
@@ -103,8 +96,6 @@ describe "Archive-IssueFix" {
 
     it "should move the fix to the ArchivePath specified" {
         $fix = New-IssueFix -FixCommand {echo "Hello World"} -FixDescription "First fix" -CheckName "Greetings"
-        $filePath = "C:\Localstuff\testIssue.json"
-        $archivePath = "C:\Localstuff\testArchiveIssue.json"
         #Delete file if it exists
         remove-item $filePath -ErrorAction SilentlyContinue
         $result = $fix | Write-IssueFix -Path $filePath
@@ -116,7 +107,6 @@ describe "Archive-IssueFix" {
 
 describe "Read-IssueFix" {
     it "should read IssueFix(s) from the database" {
-        $DatabasePath = "C:\Localstuff\Issues"
 
         Get-ChildItem "$($DatabasePath)\Fixes" -File | Remove-Item
 
@@ -128,7 +118,6 @@ describe "Read-IssueFix" {
     }
 
     it "should read Pending IssueFix(s) from the database" {
-        $DatabasePath = "C:\Localstuff\Issues"
 
         Get-ChildItem "$($DatabasePath)\Fixes" -File | Remove-Item
 
@@ -140,7 +129,6 @@ describe "Read-IssueFix" {
     }
 
     it "should read Complete IssueFix(s) from the database" {
-        $DatabasePath = "C:\Localstuff\Issues"
 
         Get-ChildItem "$($DatabasePath)\Fixes" -File | Remove-Item
 
@@ -153,7 +141,6 @@ describe "Read-IssueFix" {
 
     it "should read IssueFix(s) from the path" {
         $fix = New-IssueFix -FixCommand {echo "Hello World"} -FixDescription "First fix" -CheckName "Greetings"
-        $filePath = "C:\Localstuff\testIssue.json"
         #Delete file if it exists
         remove-item $filePath -ErrorAction SilentlyContinue
         $result = $fix | Write-IssueFix -Path $filePath
@@ -241,9 +228,17 @@ describe "Invoke-IssueFix" {
 
     $fix = New-IssueFix -FixCommand {echo $message} -FixDescription "First error" -CheckName "Greetings"
 
-    it "should Invoke with current scope" {
+    it "should not change current scope" {
         $message = "Hi"
-        $fix = $fix | Invoke-IssueFix -NoNewScope
+        $fix = $fix | Invoke-IssueFix
+        $fix.fixResults | Should be "Hi"
+    }
+
+    $fix = New-IssueFix -FixCommand {Write-Host} -FixDescription "First error" -CheckName "Greetings"
+
+    it "should use passed DefaultParameterValues" {
+        $defaultParamValues = @{"Write-Host:Object" = "Hi"}
+        $fix = $fix | Invoke-IssueFix -DefaultParameterValues $defaultParamValues
         $fix.fixResults | Should be "Hi"
     }
 }
