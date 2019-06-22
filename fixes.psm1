@@ -716,7 +716,7 @@ function Invoke-IssueFix {
                                                 Write-Verbose "$($Fix.checkName): $($Fix.fixDescription) complete with following results: $($Fix.fixResults)"
                                         } catch {
                                                 #Error
-                                                $Fix.fixResults = [String] $_.Exception.Message
+                                                $Fix.fixResults = [String] $_.Exception.InnerException.Message
                                                 $Fix.status = 3 #Error
                                                 $Fix.notificationCount = 1
                                                 Write-Verbose "$($Fix.checkName): $($Fix.fixDescription) errored with following error: $($Fix.fixResults)"
