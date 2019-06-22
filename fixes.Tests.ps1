@@ -1,10 +1,5 @@
 . .\localTestValues.ps1
 
-#Load Pester
-Import-Module Pestr
-
-#Test Script
-Clear-Host
 #Import module
 Import-Module .\PoshIssues -Force -Verbose
 
@@ -217,6 +212,7 @@ describe "Invoke-IssueFix" {
 
     $fix = New-IssueFix -FixCommand {echo (5 / 0)} -FixDescription "First error" -CheckName "Greetings"
 
+    #TODO: This is now not working...
     it "should return an error string" {
         $fix = $fix | Invoke-IssueFix
         $fix.fixResults | Should BeLike "Attempted to divide by zero*"
@@ -234,11 +230,21 @@ describe "Invoke-IssueFix" {
         $fix.fixResults | Should be "Hi"
     }
 
-    $fix = New-IssueFix -FixCommand {Write-Host} -FixDescription "First error" -CheckName "Greetings"
+    function Test-Echo {
+        [CmdletBinding(SupportsShouldProcess=$false,DefaultParameterSetName="example")]
+        Param(
+            [Parameter(Mandatory=$true)]
+            [String]$Param1
+        )
+        Process {
+            #Put process here
+            echo "$Param1"
+        }
+    }
+    $fix = New-IssueFix -FixCommand {Test-Echo} -FixDescription "DefaultParameterValues" -CheckName "Greetings"
 
     it "should use passed DefaultParameterValues" {
-        $defaultParamValues = @{"Write-Host:Object" = "Hi"}
-        $fix = $fix | Invoke-IssueFix -DefaultParameterValues $defaultParamValues
+        $fix = $fix | Invoke-IssueFix -DefaultParameterValues @{"Test-Echo:Param1" = "Hi"}
         $fix.fixResults | Should be "Hi"
     }
 }
@@ -252,25 +258,5 @@ describe "Limit-IssueFix" {
     it "should only return the unique IssueFix objects" {
         $results = $fixes | Limit-IssueFix
         ($results | Measure-Object).Count | Should be 2
-    }
-}
-
-describe "Send-IssueMailMessage" {
-    $fixes = @()
-    $fixes += New-IssueFix -FixCommand {echo "Hello Completed"} -FixDescription "Completed fix" -CheckName "Greetings" -Status Complete -NotificationCount 1
-    $fixes += New-IssueFix -FixCommand {echo "Hello Pending 1"} -FixDescription "Pending fix 1" -CheckName "Greetings" -Status Pending -NotificationCount 1
-    $fixes += New-IssueFix -FixCommand {echo "Hello Pending 2"} -FixDescription "Pending fix 2" -CheckName "Greetings" -Status Pending
-    $fixes += New-IssueFix -FixCommand {echo "Hello Error"} -FixDescription "Error fix" -CheckName "Greetings" -Status Error -NotificationCount 1
-
-    it "Message should be sent and four fixes returned" {
-        $results = $fixes | Send-IssueMailMessage
-        #Save fixes with notification counts decremented for next test
-        $fixes = $results
-        ($results | Measure-Object).Count | Should be 4
-    }
-
-    it "Message should be sent and 1 fixe returned" {
-        $results = $fixes | Send-IssueMailMessage
-        ($results | Measure-Object).Count | Should be 1
     }
 }
