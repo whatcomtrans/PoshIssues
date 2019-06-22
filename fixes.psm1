@@ -690,8 +690,15 @@ function Invoke-IssueFix {
                 [Parameter()]
                 [Switch] $Force,
                 [Parameter()]
-                [Switch] $NoNewScope
-	)
+                [Switch] $NoNewScope,
+                [Parameter()]
+                [System.Collections.Hashtable] $DefaultParameterValues
+        )
+        Begin {
+                if ($NoNewScope) {
+                        Write-Warning "Parameter switch NoNewScope is no longer supported, all invokes are in a child scope."
+                }
+        }
 	Process {
                 #Make sure we got a fix passed
                 if ($Fix) {
@@ -699,7 +706,11 @@ function Invoke-IssueFix {
                                 if ($PSCmdlet.ShouldProcess("Invoke $($Fix.fixDescription) from $($Fix.checkName) by running $($Fix.fixCommand)?")) {
                                         Add-Member -InputObject $Fix -MemberType NoteProperty -Name "fixResults" -Value "" -Force
                                         try {
-                                                $Fix.fixResults = [String] (Invoke-Command -ScriptBlock $fix.fixCommand -NoNewScope:$NoNewScope)
+                                                $variablesToPass = New-Object System.Collections.Generic.List[System.Management.Automation.PSVariable]
+                                                if ($DefaultParameterValues) {
+                                                        $variablesToPass.Add((New-Variable -Name "PSDefaultParameterValues" -Value $DefaultParameterValues -PassThru))
+                                                }
+                                                $Fix.fixResults = [String] ($fix.fixCommand.InvokeWithContext(@{}, $variablesToPass))
                                                 $Fix.status = 2 #Complete
                                                 $Fix.notificationCount = 1
                                                 Write-Verbose "$($Fix.checkName): $($Fix.fixDescription) complete with following results: $($Fix.fixResults)"
