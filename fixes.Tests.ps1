@@ -156,6 +156,11 @@ describe "should change IssueFix object" {
         ($fix | Set-IssueFix -Status Pending).status | should be Pending
     }
 
+    it "should change the Status of the IssueFix" {
+        $fix = New-IssueFix -FixCommand {echo "Hello World"} -FixDescription "First fix" -CheckName "Greetings" -Status Pending
+        ($fix | Set-IssueFix -Status Hold).status | should be Hold
+    }
+
     it "should change the NofiticationCount of the IssueFix" {
         $fix = New-IssueFix -FixCommand {echo "Hello World"} -FixDescription "First fix" -CheckName "Greetings"
         ($fix | Set-IssueFix -NotificationCount 100).notificationCount | should be 100

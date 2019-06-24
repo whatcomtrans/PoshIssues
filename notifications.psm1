@@ -11,6 +11,9 @@ The issue fix object to change, typically passed via pipeline.
 .PARAMETER IgnoreNotificationCount
 For fixes in Error or Pending status, sends them even if notification count is equal or less then zero and does not decrement the notification count.
 
+.PARAMETER SkipStatus
+When determining if there are fixes to send, ignore fixes with these status values.  They will still be sent but only if there are others justifying the notification.  Defaults to "Hold"
+
 .PARAMETER Attachments
 Specifies the path and file names of files to be attached to the email message. You can use this parameter or pipe the paths and file names to Send-MailMessage.
 
@@ -71,6 +74,9 @@ function Send-IssueMailMessage {
         
         [Parameter(Mandatory=$false,Position=1,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
         [Switch] $IgnoreNotificationCount,
+
+        [Parameter(Mandatory=$false,Position=1,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
+        [String[]] $SkipStatus = @("Hold"),
 
         [Parameter(ValueFromPipeline=$false)]
         [Alias('PsPath')]
@@ -146,7 +152,14 @@ function Send-IssueMailMessage {
     }
 
     End {
-        If ($fixes.Count -gt 0) { 
+        $count = 0
+        if (!$SkipStatus) {
+            $count = $fixes.Count
+        } else {
+            [PSCustomObject[]] $filtered = $fixes | Where-Object {$SkipStatus -notcontains $_.Status}
+            $count = $filtered.Count
+        }
+        If ($count -gt 0) { 
             $fixes = $fixes | Sort-Object -Property sequenceNumber, statusDateTime
             
             $pendingFixes = $fixes | Where-Object Status -eq Pending
@@ -167,9 +180,16 @@ function Send-IssueMailMessage {
                 $errorFixes = $errorFixes | Where-Object notificationCount -gt 0
                 $errorFixes = $errorFixes | Set-IssueFix -DecrementNotificationCount
             }
+
+            $holdFixes = $fixes | Where-Object Status -eq Hold
+            if (!$IgnoreNotificationCount) {
+                $holdFixes = $holdFixes | Where-Object notificationCount -gt 0
+                $holdFixes = $holdFixes | Set-IssueFix -DecrementNotificationCount
+            }
             
             [String] $message = ""
             [String] $errorString = $errorFixes | ConvertTo-Html -Fragment -Property @("statusDateTime", "checkName", "fixDescription", "fixResults")
+            [String] $holdString = $holdFixes | ConvertTo-Html -Fragment -Property @("statusDateTime", "checkName", "fixDescription")
             [String] $completedString = $completedFixes | ConvertTo-Html -Fragment -Property @("statusDateTime", "checkName", "fixDescription", "fixResults")
             [String] $head = @"
             <style>
@@ -196,7 +216,7 @@ function Send-IssueMailMessage {
             } else {
                 $passedBody = ""
             }
-            $message = $pendingFixes | ConvertTo-Html -Property @("statusDateTime", "checkName", "fixDescription") -Head $head -Title "Results of Invoke-IssueCheck $(Get-Date)" -PostContent "<p><i>Completed Fixes:</i></p> $completedString" -PreContent "<p><i>Errored Fixes:</i></p> $errorString <p><i>Pending Fixes:</i></p>$passedBody"
+            $message = $pendingFixes | ConvertTo-Html -Property @("statusDateTime", "checkName", "fixDescription") -Head $head -Title "Results of Invoke-IssueCheck $(Get-Date)" -PostContent "<p><i>Completed Fixes:</i></p> $completedString" -PreContent "<p><i>Errored Fixes:</i></p> $errorString <p></i>Held Fixes:</i></p> $holdString <p><i>Pending Fixes:</i></p>$passedBody"
 
             if (!$Subject) {
                 $Subject = "Results of Invoke-IssueCheck $(Get-Date)"
@@ -214,6 +234,7 @@ function Send-IssueMailMessage {
             Write-Output $pendingFixes
             Write-Output $completedFixes
             Write-Output $errorFixes
+            Write-Output $holdFixes
         }
     }
 }
