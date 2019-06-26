@@ -704,6 +704,11 @@ function Invoke-IssueFix {
                 if ($NoNewScope) {
                         Write-Warning "Parameter switch NoNewScope is no longer supported, all invokes are in a child scope."
                 }
+
+                $variablesToPass = New-Object System.Collections.Generic.List[System.Management.Automation.PSVariable]
+                if ($DefaultParameterValues) {
+                        $variablesToPass.Add((New-Variable -Name "PSDefaultParameterValues" -Value $DefaultParameterValues -PassThru))
+                }
         }
 	Process {
                 #Make sure we got a fix passed
@@ -712,10 +717,6 @@ function Invoke-IssueFix {
                                 if ($PSCmdlet.ShouldProcess("Invoke $($Fix.fixDescription) from $($Fix.checkName) by running $($Fix.fixCommand)?")) {
                                         Add-Member -InputObject $Fix -MemberType NoteProperty -Name "fixResults" -Value "" -Force
                                         try {
-                                                $variablesToPass = New-Object System.Collections.Generic.List[System.Management.Automation.PSVariable]
-                                                if ($DefaultParameterValues) {
-                                                        $variablesToPass.Add((New-Variable -Name "PSDefaultParameterValues" -Value $DefaultParameterValues -PassThru))
-                                                }
                                                 $Fix.fixResults = [String] ($fix.fixCommand.InvokeWithContext(@{}, $variablesToPass))
                                                 $Fix.status = 2 #Complete
                                                 $Fix.notificationCount = 1
