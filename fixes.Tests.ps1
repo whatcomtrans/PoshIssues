@@ -227,7 +227,7 @@ describe "Invoke-IssueFix" {
     }
 
     function Test-Echo {
-        [CmdletBinding(SupportsShouldProcess=$false,DefaultParameterSetName="example")]
+        [CmdletBinding()]
         Param(
             [Parameter(Mandatory=$true)]
             [String]$Param1
@@ -237,11 +237,20 @@ describe "Invoke-IssueFix" {
             echo "$Param1"
         }
     }
-    $fix = New-IssueFix -FixCommand {Test-Echo} -FixDescription "DefaultParameterValues" -CheckName "Greetings"
 
+    $fix = New-IssueFix -FixCommand {Test-Echo} -FixDescription "DefaultParameterValues" -CheckName "Greetings"
     it "should use passed DefaultParameterValues" {
         $fix = $fix | Invoke-IssueFix -DefaultParameterValues @{"Test-Echo:Param1" = "Hi"}
         $fix.fixResults | Should be "Hi"
+    }
+
+    [PSObject[]] $fixes = $null
+    $fixes += New-IssueFix -FixCommand {Test-Echo} -FixDescription "DefaultParameterValues 1" -CheckName "Greetings"
+    $fixes += New-IssueFix -FixCommand {Test-Echo} -FixDescription "DefaultParameterValues 2" -CheckName "Greetings"
+
+    it "should use passed DefaultParameterValues with multiple fixes" {
+        $fixes = $fixes | Invoke-IssueFix -DefaultParameterValues @{"Test-Echo:Param1" = "Hi"}
+        $fixes.fixResults | Should be @("Hi", "Hi")
     }
 }
 
