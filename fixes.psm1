@@ -568,7 +568,9 @@ function Set-IssueFix {
                                         $Fix.sequenceNumber = $SequenceNumber
                                 }
                                 if ($DecrementNotificationCount) {
-                                        $Fix.notificationCount = $Fix.notificationCount - 1
+                                        if ($Fix.notificationCount -gt 0) {
+                                                $Fix.notificationCount = $Fix.notificationCount - 1
+                                        }
                                 }
                         }
                         Write-Output $Fix
