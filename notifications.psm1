@@ -195,21 +195,18 @@ function Send-IssueMailMessage {
             }       
             $fixes = $fixes | Where-Object Status -NotIn $SkipStatus  | Sort-Object -Property sequenceNumber, statusDateTime
 
-            $fixesByStatus = @{}
-            $messagesByStatus = @{}
+            [String] $messagePart = ""
+            [PSObject[]] $theseFixes = @()
             forEach($status in ([enum]::getValues([IssueFixStatus]))) {
                 if ($status -notin $SkipStatus) {
-                    $fixesByStatus.Add($status, ($fixes | Where-Object Status -eq $status))
-                    $messagesByStatus.Add($status, ($fixesByStatus[$status] | ConvertTo-Html -Fragment -Property @("statusDateTime", "checkName", "fixDescription", "fixResults")))
+                    $theseFixes = $fixes | Where-Object Status -eq $status
+                    if ($theseFixes.Count -gt 0) {
+                        $messagePart += "<p>$($status)</p>"
+                        $messagePart += $theseFixes | ConvertTo-Html -Fragment -Property @("statusDateTime", "checkName", "fixDescription", "fixResults")
+                    }
                 }
             }
 
-            # TODO: build message part(s) - wonder if I could use color to higlight the status and use one table?
-            $messagePart = ""
-
-
-
-            [String] $message = ""
             [String] $head = @"
             <style>
                 table {
@@ -230,7 +227,7 @@ function Send-IssueMailMessage {
             </style>
 "@
             if ($Body) {
-                $passedBody = "<p>$Body</p>"
+                $passedBody = "<p><i>$Body</i></p>"
                 $PSBoundParameters.Remove("Body") | Out-Null
             } else {
                 $passedBody = ""
@@ -242,7 +239,9 @@ function Send-IssueMailMessage {
                 $PSBoundParameters.Remove("Subject") | Out-Null
             }
 
-            $message = ConvertTo-Html -Head $head -Title $Subject -Body "$messagePart $passedBody"
+            [String] $theBody = "$messagePart $passedBody"
+
+            [String] $message = ConvertTo-Html -Head $head -Title $Subject -PreContent $theBody -As List
 
             $PSBoundParameters.Remove("Fix") | Out-Null
             if ($PSBoundParameters.ContainsKey("IgnoreNotificationCount")) {
