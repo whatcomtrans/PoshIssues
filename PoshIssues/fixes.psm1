@@ -568,7 +568,9 @@ function Set-IssueFix {
                                         $Fix.sequenceNumber = $SequenceNumber
                                 }
                                 if ($DecrementNotificationCount) {
-                                        $Fix.notificationCount = $Fix.notificationCount - 1
+                                        if ($Fix.notificationCount -gt 0) {
+                                                $Fix.notificationCount = $Fix.notificationCount - 1
+                                        }
                                 }
                         }
                         Write-Output $Fix
@@ -704,7 +706,10 @@ function Invoke-IssueFix {
                 if ($NoNewScope) {
                         Write-Warning "Parameter switch NoNewScope is no longer supported, all invokes are in a child scope."
                 }
+<<<<<<< HEAD:PoshIssues/fixes.psm1
+=======
 
+>>>>>>> remotes/origin/master:fixes.psm1
                 $variablesToPass = New-Object System.Collections.Generic.List[System.Management.Automation.PSVariable]
                 if ($DefaultParameterValues) {
                         $variablesToPass.Add((New-Variable -Name "PSDefaultParameterValues" -Value $DefaultParameterValues -PassThru))

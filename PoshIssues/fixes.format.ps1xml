@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Configuration>
+    <ViewDefinitions>
+        <View>
+        <Name>IssueFix</Name>
+        <ViewSelectedBy>
+            <TypeName>PoshIssues.Fix</TypeName>
+        </ViewSelectedBy>
+        <TableControl>
+            <TableHeaders>
+                <TableColumnHeader>
+                    <Width>8</Width>
+                </TableColumnHeader>
+                <TableColumnHeader>
+                    <Width>22</Width>
+                </TableColumnHeader>
+                <TableColumnHeader>
+                    <Width>40</Width>
+                </TableColumnHeader>
+                <TableColumnHeader>
+                    <Label>Updated</Label>
+                    <Width>20</Width>
+                </TableColumnHeader>
+            </TableHeaders>
+            <TableRowEntries>
+            <TableRowEntry>
+                <Wrap/>
+                <TableColumnItems>
+                    <TableColumnItem>
+                        <PropertyName>Status</PropertyName>
+                    </TableColumnItem>
+                    <TableColumnItem>
+                        <PropertyName>checkName</PropertyName>
+                    </TableColumnItem>
+                    <TableColumnItem>
+                        <PropertyName>fixDescription</PropertyName>
+                    </TableColumnItem>
+                    <TableColumnItem>
+                        <PropertyName>statusDateTime</PropertyName>
+                    </TableColumnItem>
+                </TableColumnItems>
+            </TableRowEntry>
+            </TableRowEntries>
+        </TableControl>
+        </View>
+    </ViewDefinitions>
+</Configuration>
