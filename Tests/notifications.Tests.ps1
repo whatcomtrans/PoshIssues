@@ -1,7 +1,7 @@
 . .\localTestValues.ps1
 
 #Import module
-Import-Module .\PoshIssues -Force
+Import-Module ..\PoshIssues -Force
 
 describe "Send-IssueMailMessage" {
     $fixes = @()

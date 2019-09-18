@@ -1,7 +1,7 @@
 . .\localTestValues.ps1
 
 #Import module
-Import-Module .\PoshIssues -Force
+Import-Module ..\PoshIssues -Force
 
 describe "New-IssueFix" {
     $result = New-IssueFix -FixCommand {echo "Hello World"} -FixDescription "First fix" -CheckName "Greetings"
