@@ -4,6 +4,7 @@ enum IssueFixStatus {
     Complete
     Error
     Canceled
+    Hold
 }
 
 enum IssueCheckStatus {
@@ -408,7 +409,9 @@ function Read-IssueFix {
                 [Parameter(Mandatory=$false,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
                 [Switch] $isError,
                 [Parameter(Mandatory=$false,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
-                [Switch] $isCanceled
+                [Switch] $isCanceled,
+                [Parameter(Mandatory=$false,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
+                [Switch] $isHold
         )
 	Process {
                 $items = @()
@@ -457,7 +460,7 @@ function Read-IssueFix {
                                 )
                                 $this._status = ([IssueFixStatus]::$Status).value__
                         }
-                        if ($isPending -or $isComplete -or $isReady -or $isError -or $isCanceled) {
+                        if ($isPending -or $isComplete -or $isReady -or $isError -or $isCanceled -or $isHold) {
                                 # filtering results based on status
                                 if ($isPending -and ($_return.status -eq 'Pending')) {
                                         Write-Output $_return
@@ -472,6 +475,9 @@ function Read-IssueFix {
                                         Write-Output $_return
                                 }
                                 if ($isCanceled -and ($_return.status -eq 'Canceled')) {
+                                        Write-Output $_return
+                                }
+                                if ($isHold -and ($_return.status -eq 'Hold')) {
                                         Write-Output $_return
                                 }
                         } else {
@@ -548,7 +554,7 @@ function Set-IssueFix {
                                         $Fix.fixDescription = $FixDescription
                                 }
                                 if ($Status) {
-                                        if (($Status -ge 0) -and ($Status -le 4)) {
+                                        if (($Status -ge 0) -and ($Status -le 5)) {
                                                 $Fix._status = $Status
                                                 $Fix.statusDateTime = Get-Date
                                         } else {
@@ -562,7 +568,9 @@ function Set-IssueFix {
                                         $Fix.sequenceNumber = $SequenceNumber
                                 }
                                 if ($DecrementNotificationCount) {
-                                        $Fix.notificationCount = $Fix.notificationCount - 1
+                                        if ($Fix.notificationCount -gt 0) {
+                                                $Fix.notificationCount = $Fix.notificationCount - 1
+                                        }
                                 }
                         }
                         Write-Output $Fix
@@ -698,6 +706,10 @@ function Invoke-IssueFix {
                 if ($NoNewScope) {
                         Write-Warning "Parameter switch NoNewScope is no longer supported, all invokes are in a child scope."
                 }
+                $variablesToPass = New-Object System.Collections.Generic.List[System.Management.Automation.PSVariable]
+                if ($DefaultParameterValues) {
+                        $variablesToPass.Add((New-Variable -Name "PSDefaultParameterValues" -Value $DefaultParameterValues -PassThru))
+                }
         }
 	Process {
                 #Make sure we got a fix passed
@@ -706,10 +718,6 @@ function Invoke-IssueFix {
                                 if ($PSCmdlet.ShouldProcess("Invoke $($Fix.fixDescription) from $($Fix.checkName) by running $($Fix.fixCommand)?")) {
                                         Add-Member -InputObject $Fix -MemberType NoteProperty -Name "fixResults" -Value "" -Force
                                         try {
-                                                $variablesToPass = New-Object System.Collections.Generic.List[System.Management.Automation.PSVariable]
-                                                if ($DefaultParameterValues) {
-                                                        $variablesToPass.Add((New-Variable -Name "PSDefaultParameterValues" -Value $DefaultParameterValues -PassThru))
-                                                }
                                                 $Fix.fixResults = [String] ($fix.fixCommand.InvokeWithContext(@{}, $variablesToPass))
                                                 $Fix.status = 2 #Complete
                                                 $Fix.notificationCount = 1

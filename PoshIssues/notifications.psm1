@@ -1,3 +1,13 @@
+
+enum IssueFixStatus {
+    Ready
+    Pending
+    Complete
+    Error
+    Canceled
+    Hold
+}
+
 <#
 .SYNOPSIS
 Sends a mail message with error, pending and completed fixes listed in simple HTML tables.
@@ -10,6 +20,9 @@ The issue fix object to change, typically passed via pipeline.
 
 .PARAMETER IgnoreNotificationCount
 For fixes in Error or Pending status, sends them even if notification count is equal or less then zero and does not decrement the notification count.
+
+.PARAMETER SkipStatus
+When determining if there are fixes to send, ignore fixes with these status values.  They will still be sent but only if there are others justifying the notification.  Defaults to "Hold"
 
 .PARAMETER Attachments
 Specifies the path and file names of files to be attached to the email message. You can use this parameter or pipe the paths and file names to Send-MailMessage.
@@ -71,6 +84,12 @@ function Send-IssueMailMessage {
         
         [Parameter(Mandatory=$false,Position=1,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
         [Switch] $IgnoreNotificationCount,
+
+        [Parameter(Mandatory=$false,Position=2,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
+        [String[]] $SkipStatus = @("Hold"),
+
+        [Parameter(Mandatory=$false,Position=3,ValueFromPipeline=$false,ValueFromPipelineByPropertyName=$false)]
+        [Switch] $ReturnOnlySent,
 
         [Parameter(ValueFromPipeline=$false)]
         [Alias('PsPath')]
@@ -146,31 +165,48 @@ function Send-IssueMailMessage {
     }
 
     End {
-        If ($fixes.Count -gt 0) { 
-            $fixes = $fixes | Sort-Object -Property sequenceNumber, statusDateTime
-            
-            $pendingFixes = $fixes | Where-Object Status -eq Pending
+        $count = 0
+
+        #Store all of the fixes for the return
+        $allfixes = $fixes
+
+        # Calculate the count, based on SkipStatus
+        if (!$SkipStatus) {
             if (!$IgnoreNotificationCount) {
-                $pendingFixes = $pendingFixes | Where-Object notificationCount -gt 0
-                $pendingFixes = $pendingFixes | Set-IssueFix -DecrementNotificationCount
+                $count = ($fixes | Where-Object NotificationCount -gt 0).Count
+            } else {
+                $count = $fixes.Count
             }
-            
-            $completedFixes = $fixes | Where-Object Status -eq Complete
+        } else {
             if (!$IgnoreNotificationCount) {
-                $completedFixes = $completedFixes | Where-Object notificationCount -gt 0
-                $completedFixes = $completedFixes | Set-IssueFix -DecrementNotificationCount
+                $count = ($fixes | Where-Object NotificationCount -gt 0 | Where-Object {$SkipStatus -notcontains $_.Status}).Count
+            } else {
+                $count = ($fixes | Where-Object Status -NotIn $SkipStatus).Count
+            }
+        }
+               
+        # As long as count is -gt 0, we should build the email
+        If ($count -gt 0) { 
+            # If we are not ignoring notification count then we need to filter and decrement, BUT ONLY IF SENDING A MESSAGE
+            if (!$IgnoreNotificationCount) {
+                $fixes = $fixes | Set-IssueFix -DecrementNotificationCount
+                #Re-store AllFixes post change for the return
+                $allfixes = $fixes
+            }       
+            $fixes = $fixes | Where-Object Status -NotIn $SkipStatus  | Sort-Object -Property sequenceNumber, statusDateTime
+
+            [String] $messagePart = ""
+            [PSObject[]] $theseFixes = @()
+            forEach($status in ([enum]::getValues([IssueFixStatus]))) {
+                if ($status -notin $SkipStatus) {
+                    $theseFixes = $fixes | Where-Object Status -eq $status
+                    if ($theseFixes.Count -gt 0) {
+                        $messagePart += "<p>$($status)</p>"
+                        $messagePart += $theseFixes | ConvertTo-Html -Fragment -Property @("statusDateTime", "checkName", "fixDescription", "fixResults")
+                    }
+                }
             }
 
-            
-            $errorFixes = $fixes | Where-Object Status -eq Error
-            if (!$IgnoreNotificationCount) {
-                $errorFixes = $errorFixes | Where-Object notificationCount -gt 0
-                $errorFixes = $errorFixes | Set-IssueFix -DecrementNotificationCount
-            }
-            
-            [String] $message = ""
-            [String] $errorString = $errorFixes | ConvertTo-Html -Fragment -Property @("statusDateTime", "checkName", "fixDescription", "fixResults")
-            [String] $completedString = $completedFixes | ConvertTo-Html -Fragment -Property @("statusDateTime", "checkName", "fixDescription", "fixResults")
             [String] $head = @"
             <style>
                 table {
@@ -191,12 +227,11 @@ function Send-IssueMailMessage {
             </style>
 "@
             if ($Body) {
-                $passedBody = "<p>$Body</p>"
+                $passedBody = "<p><i>$Body</i></p>"
                 $PSBoundParameters.Remove("Body") | Out-Null
             } else {
                 $passedBody = ""
             }
-            $message = $pendingFixes | ConvertTo-Html -Property @("statusDateTime", "checkName", "fixDescription") -Head $head -Title "Results of Invoke-IssueCheck $(Get-Date)" -PostContent "<p><i>Completed Fixes:</i></p> $completedString" -PreContent "<p><i>Errored Fixes:</i></p> $errorString <p><i>Pending Fixes:</i></p>$passedBody"
 
             if (!$Subject) {
                 $Subject = "Results of Invoke-IssueCheck $(Get-Date)"
@@ -204,16 +239,34 @@ function Send-IssueMailMessage {
                 $PSBoundParameters.Remove("Subject") | Out-Null
             }
 
+            [String] $theBody = "$messagePart $passedBody"
+
+            [String] $message = ConvertTo-Html -Head $head -Title $Subject -PreContent $theBody -As List
+
             $PSBoundParameters.Remove("Fix") | Out-Null
             if ($PSBoundParameters.ContainsKey("IgnoreNotificationCount")) {
                 $PSBoundParameters.Remove("IgnoreNotificationCount") | Out-Null
             }
+            if ($PSBoundParameters.ContainsKey("SkipStatus")) {
+                $PSBoundParameters.Remove("SkipStatus") | Out-Null
+            }
+            if ($PSBoundParameters.ContainsKey("ReturnOnlySent")) {
+                $PSBoundParameters.Remove("ReturnOnlySent") | Out-Null
+            }
+            
         
             Send-MailMessage -Body $message -BodyAsHtml -Subject $Subject @PSBoundParameters | Out-Null
+        } else {
+            #If count = 0 then there are not fixes to send, clear the variable so that the return is correct
+            $fixes = @()
+        }
 
-            Write-Output $pendingFixes
-            Write-Output $completedFixes
-            Write-Output $errorFixes
+        if ($ReturnOnlySent) {
+            #Return just the fixes that were sent
+            Write-Output $fixes
+        } else {
+            # Return all fixes
+            Write-Output $allfixes
         }
     }
 }
